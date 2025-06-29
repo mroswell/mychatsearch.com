@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Conversation Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .sidebar-toggle {
+            padding: 0.5rem;
+            background: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: #f3f4f6;
+        }
+
+        .toggle-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed + .content-area .header .toggle-arrow {
+            transform: rotate(180deg);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #7c3aed;
+        }
+
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .clear-button {
+            padding: 0.75rem 1rem;
+            background-color: #f3f4f6;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .clear-button:hover:not(:disabled) {
+            background-color: #e5e7eb;
+        }
+
+        .clear-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 390px;
+            min-width: 200px;
+            max-width: 50%;
+            background-color: #fafafa;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 1rem;
+            position: relative;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            margin-left: -390px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: -3px;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            cursor: ew-resize;
+            background-color: transparent;
+            transition: background-color 0.2s;
+        }
+
+        .resize-handle:hover {
+            background-color: #7c3aed;
+        }
+
+        .resize-handle.dragging {
+            background-color: #7c3aed;
+        }
+
+        .search-results-header {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: #f3e8ff;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .search-results-header.active {
+            display: block;
+        }
+
+        .conversation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .conversation-item {
+            padding: 0.75rem;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .conversation-item:hover {
+            background-color: #f0f0f0;
+            border-color: #7c3aed;
+        }
+
+        .conversation-item.active {
+            background-color: #f3e8ff;
+            border-color: #7c3aed;
+        }
+
+        .conversation-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-date {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .conversation-preview {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            background-color: #fff;
+        }
+
+        .chat-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .conversation-header {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-date {
+            font-size: 0.95rem;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .header-title {
+            margin-right: 0;
+        }
+
+        .header-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .header-button:hover {
+            background-color: #f3f4f6;
+        }
+
+        .header-button.copied {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .artifact-panel {
+            width: 50%;
+            border-left: 1px solid #e0e0e0;
+            overflow-y: auto;
+            display: none;
+            background-color: #fafafa;
+        }
+
+        .artifact-panel.active {
+            display: block;
+        }
+
+        .message {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .message-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .message.human .message-avatar {
+            background-color: #7c3aed;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .message-text {
+            word-wrap: break-word;
+        }
+
+        .message-controls {
+            margin-bottom: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .toggle-markdown {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-markdown:hover {
+            background-color: #e5e7eb;
+        }
+
+        .toggle-markdown.active {
+            background-color: #6b7280;
+            color: white;
+            border-color: #6b7280;
+        }
+
+        .copy-button {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 0.5rem;
+        }
+
+        .copy-button:hover {
+            background-color: #f3f4f6;
+        }
+
+        .copy-button.copied {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .raw-markdown {
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Markdown styles */
+        .message-text h1, .message-text h2, .message-text h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-text h1 { font-size: 1.5rem; }
+        .message-text h2 { font-size: 1.3rem; }
+        .message-text h3 { font-size: 1.1rem; }
+
+        .message-text p {
+            margin-bottom: 1rem;
+        }
+
+        .message-text code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message-text pre {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .message-text pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .message-text ul, .message-text ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .message-text blockquote {
+            border-left: 4px solid #e5e7eb;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #6b7280;
+        }
+
+        .message-text a {
+            color: #7c3aed;
+            text-decoration: none;
+        }
+
+        .message-text a:hover {
+            text-decoration: underline;
+        }
+
+        .message-text strong {
+            font-weight: 600;
+        }
+
+        .message-text em {
+            font-style: italic;
+        }
+
+        .highlight {
+            background-color: #fef3c7;
+            font-weight: 500;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+        }
+
+        .artifact-header {
+            padding: 1rem;
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 500;
+        }
+
+        .artifact-content {
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .stats {
+            padding: 1rem;
+            background-color: #f3f4f6;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .no-results {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .file-input-container {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background-color: #7c3aed;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .file-input-label:hover {
+            background-color: #6d28d9;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .artifact-button {
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #7c3aed;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .artifact-button:hover {
+            background-color: #6d28d9;
+        }
+
+        .conversation-suggestions {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+
+        .suggestions-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #374151;
+        }
+
+        .suggestion-card {
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+
+        .suggestion-card:hover {
+            border-color: #7c3aed;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #111827;
+        }
+
+        .suggestion-date {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .shuffle-button {
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #fff;
+            color: #333;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .shuffle-button:hover {
+            background-color: #f3f4f6;
+        }
+
+        .shuffle-icon {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div class="header">
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        <svg class="toggle-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </button>
+    <div class="logo">Claude Search</div>
+    <div class="search-container">
+        <div class="search-wrapper" id="searchWrapper">
+            <input type="text" class="search-box" id="searchInput" placeholder="Search conversations..." disabled>
+            <button class="clear-button" id="clearButton" onclick="clearSearch()" disabled>Clear</button>
+        </div>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="sidebar" id="sidebar">
+        <div class="resize-handle" id="resizeHandle"></div>
+        <div id="stats" class="stats" style="display: none;"></div>
+        <div id="searchResultsHeader" class="search-results-header"></div>
+        <div id="conversationList" class="conversation-list">
+            <div class="file-input-container">
+                <label for="fileInput" class="file-input-label">
+                    Load<br>JSON file
+                </label>
+                <input type="file" id="fileInput" class="file-input" accept=".json,application/json">
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div id="chatView" class="chat-view">
+            <div class="no-results">
+                <div style="max-width: 600px; margin: 0 auto; text-align: left; line-height: 1.6;">
+                    <ol style="padding-left: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;">Visit: <a href="https://claude.ai/settings/data-privacy-controls" target="_blank" style="color: #7c3aed;">https://claude.ai/settings/data-privacy-controls</a> to export your Claude conversations. Export is at the bottom of that page.</li>
+                        <li style="margin-bottom: 0.5rem;">Download the file when the email arrives.</li>
+                        <li style="margin-bottom: 0.5rem;">Unzip the file and identify the directory where your files reside.</li>
+                        <li style="margin-bottom: 0.5rem;">Load your JSON export file (conversations.json) to begin searching.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        <div id="artifactPanel" class="artifact-panel"></div>
+    </div>
+</div>
+
+<script>
+    let conversations = [];
+    let filteredConversations = [];
+    let currentConversation = null;
+    let searchTimeout = null;
+    let currentSearchQuery = '';
+
+    const fileInput = document.getElementById('fileInput');
+    const searchInput = document.getElementById('searchInput');
+    const conversationList = document.getElementById('conversationList');
+    const chatView = document.getElementById('chatView');
+    const artifactPanel = document.getElementById('artifactPanel');
+    const statsDiv = document.getElementById('stats');
+    const searchResultsHeader = document.getElementById('searchResultsHeader');
+    const clearButton = document.getElementById('clearButton');
+
+    fileInput.addEventListener('change', handleFileUpload);
+    searchInput.addEventListener('input', handleSearch);
+
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            // Handle different possible structures
+            if (Array.isArray(data)) {
+                conversations = data;
+            } else if (data.chats) {
+                conversations = data.chats;
+            } else if (data.conversations) {
+                conversations = data.conversations;
+            } else {
+                // If the data is a single object with UUID keys (like your sample)
+                conversations = Object.values(data);
+            }
+
+            // Sort conversations by date (newest first)
+            conversations.sort((a, b) => {
+                const dateA = new Date(a.created_at || 0);
+                const dateB = new Date(b.created_at || 0);
+                return dateB - dateA;
+            });
+
+            console.log('Loaded conversations:', conversations.length);
+
+            // Enable search controls
+            searchInput.disabled = false;
+            clearButton.disabled = false;
+
+            statsDiv.style.display = 'block';
+            updateStats();
+            displayConversations(conversations);
+            showConversationSuggestions();
+
+        } catch (error) {
+            console.error('Error details:', error);
+            alert('Error loading file: ' + error.message);
+        }
+    }
+
+    function updateStats() {
+        const totalMessages = conversations.reduce((sum, conv) =>
+            sum + (conv.chat_messages?.length || 0), 0);
+
+        statsDiv.innerHTML = `
+                <div><strong>${conversations.length}</strong> conversations</div>
+                <div><strong>${totalMessages}</strong> total messages</div>
+            `;
+    }
+
+    function handleSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = searchInput.value.toLowerCase().trim();
+            currentSearchQuery = query;
+
+            if (!query) {
+                filteredConversations = conversations;
+                searchResultsHeader.classList.remove('active');
+                displayConversations(conversations);
+                return;
+            }
+
+            filteredConversations = conversations.filter(conv => {
+                // Search in conversation name
+                if (conv.name?.toLowerCase().includes(query)) return true;
+
+                // Search in messages
+                return conv.chat_messages?.some(msg =>
+                    msg.text?.toLowerCase().includes(query) ||
+                    msg.content?.some(c => c.text?.toLowerCase().includes(query))
+                );
+            });
+
+            searchResultsHeader.classList.add('active');
+            searchResultsHeader.textContent = `Found ${filteredConversations.length} conversations matching "${query}"`;
+            displayConversations(filteredConversations, query);
+        }, 300);
+    }
+
+    function clearSearch() {
+        searchInput.value = '';
+        currentSearchQuery = '';
+        filteredConversations = conversations;
+        searchResultsHeader.classList.remove('active');
+        displayConversations(conversations);
+
+        // Clear the detail view and show suggestions
+        artifactPanel.classList.remove('active');
+        artifactPanel.innerHTML = '';
+        showConversationSuggestions();
+    }
+
+    function showConversationSuggestions() {
+        if (conversations.length === 0) {
+            chatView.innerHTML = '<div class="no-results">Load your Claude JSON export file to begin</div>';
+            return;
+        }
+
+        // Get 4 random conversations
+        const shuffled = [...conversations].sort(() => 0.5 - Math.random());
+        const suggestions = shuffled.slice(0, Math.min(4, conversations.length));
+
+        let suggestionsHtml = `
+                <div class="conversation-suggestions">
+                    <div class="suggestions-title">Explore Conversations</div>
+                    <button class="shuffle-button" onclick="showConversationSuggestions()">
+                        <svg class="shuffle-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Show Different Conversations
+                    </button>
+            `;
+
+        suggestions.forEach(conv => {
+            suggestionsHtml += `
+                    <div class="suggestion-card" onclick="selectConversation('${conv.uuid}')">
+                        <div class="suggestion-title">${escapeHtml(conv.name || 'Untitled')}</div>
+                        <div class="suggestion-date">${formatDate(conv.created_at)}</div>
+                    </div>
+                `;
+        });
+
+        suggestionsHtml += '</div>';
+        chatView.innerHTML = suggestionsHtml;
+    }
+
+    window.selectConversation = function(conversationId) {
+        const conv = conversations.find(c => c.uuid === conversationId);
+        if (conv) {
+            displayConversation(conv, currentSearchQuery);
+
+            // Update active state in sidebar
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+    };
+
+    function displayConversations(convs, searchQuery = '') {
+        if (convs.length === 0) {
+            conversationList.innerHTML = '<div class="no-results">No conversations found</div>';
+            return;
+        }
+
+        conversationList.innerHTML = convs.map(conv => {
+            // Get preview text from first message
+            let preview = '';
+            if (searchQuery && conv.chat_messages?.length > 0) {
+                const matchingMsg = conv.chat_messages.find(msg =>
+                    msg.text?.toLowerCase().includes(searchQuery) ||
+                    msg.content?.some(c => c.text?.toLowerCase().includes(searchQuery))
+                );
+                if (matchingMsg) {
+                    const text = matchingMsg.text || matchingMsg.content?.[0]?.text || '';
+                    const index = text.toLowerCase().indexOf(searchQuery);
+                    const start = Math.max(0, index - 30);
+                    const end = Math.min(text.length, index + searchQuery.length + 30);
+                    preview = '...' + text.substring(start, end) + '...';
+                }
+            }
+
+            return `
+                    <div class="conversation-item" data-id="${conv.uuid}">
+                        <div class="conversation-title">${escapeHtml(conv.name || 'Untitled')}</div>
+                        <div class="conversation-date">${formatDate(conv.created_at)}</div>
+                        ${preview ? `<div class="conversation-preview">${highlightText(preview, searchQuery)}</div>` : ''}
+                    </div>
+                `;
+        }).join('');
+
+        // Add click handlers
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const conv = conversations.find(c => c.uuid === id);
+                displayConversation(conv, currentSearchQuery);
+
+                // Update active state
+                document.querySelectorAll('.conversation-item').forEach(i =>
+                    i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    }
+
+    function displayConversation(conv, searchQuery = '') {
+        currentConversation = conv;
+        artifactPanel.classList.remove('active');
+        artifactPanel.innerHTML = '';
+
+        if (!conv.chat_messages || conv.chat_messages.length === 0) {
+            chatView.innerHTML = '<div class="no-results">No messages in this conversation</div>';
+            return;
+        }
+
+        // Add conversation title at the top
+        const conversationTitle = conv.name || 'Untitled Conversation';
+        const conversationDate = formatDate(conv.created_at);
+
+        let messagesHtml = `
+            <div class="conversation-header">
+                <div class="header-top">
+                    <span class="header-title">${escapeHtml(conversationTitle)}</span>
+                    <button class="header-button" onclick="copyTitle('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">Copy Title</button>
+                    <button class="header-button" onclick="copyClaudeSearchUrl('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">Copy Claude Search URL</button>
+                </div>
+                <div class="header-date">${conversationDate}</div>
+            </div>
+        `;
+
+        messagesHtml += conv.chat_messages.map((msg, index) => {
+            const sender = msg.sender;
+            const text = msg.text || msg.content?.[0]?.text || '';
+
+            // Convert markdown to HTML
+            const htmlText = marked.parse(text);
+
+            // Highlight search terms in the HTML
+            const highlightedHtml = searchQuery ?
+                highlightHtml(htmlText, searchQuery) : htmlText;
+
+            // Highlight search terms in raw markdown
+            const highlightedRaw = searchQuery ?
+                highlightText(text, searchQuery) : escapeHtml(text);
+
+            // Check for artifacts
+            const artifacts = extractArtifacts(msg);
+            const artifactButton = artifacts.length > 0 ?
+                `<button class="artifact-button" onclick="showArtifact('${msg.uuid}')">View Artifact</button>` : '';
+
+            return `
+                    <div class="message ${sender}" data-msg-id="${msg.uuid}">
+                        <div class="message-avatar"></div>
+                        <div class="message-content">
+                            <div class="message-controls">
+                                <button class="toggle-markdown active" onclick="toggleMarkdown(${index}, true)">Rendered</button>
+                                <button class="toggle-markdown" onclick="toggleMarkdown(${index}, false)">Markdown</button>
+                                <button class="copy-button" onclick="copyMessage(${index})">Copy</button>
+                            </div>
+                            <div class="message-text" id="message-${index}" data-raw-text="${escapeHtml(text).replace(/"/g, '&quot;')}">
+                                <div class="rendered-content">${highlightedHtml}</div>
+                                <div class="raw-markdown" style="display: none;">${highlightedRaw}</div>
+                            </div>
+                            ${artifactButton}
+                        </div>
+                    </div>
+                `;
+        }).join('');
+
+        chatView.innerHTML = messagesHtml;
+    }
+
+    window.copyTitle = async function(title) {
+        try {
+            await navigator.clipboard.writeText(title);
+
+            // Show copied feedback
+            const buttons = document.querySelectorAll('.header-button');
+            const button = buttons[0]; // First button is Copy Title
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('copied');
+
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy title: ', err);
+            // Try fallback method
+            const textArea = document.createElement("textarea");
+            textArea.value = title;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const buttons = document.querySelectorAll('.header-button');
+                const button = buttons[0];
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy title to clipboard');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+
+    window.copyClaudeSearchUrl = async function(title) {
+        // URL encode the title to handle spaces and special characters
+        const encodedTitle = encodeURIComponent(title);
+        const claudeSearchUrl = `https://claude.ai/recents?search=${encodedTitle}`;
+
+        try {
+            await navigator.clipboard.writeText(claudeSearchUrl);
+
+            // Show copied feedback
+            const buttons = document.querySelectorAll('.header-button');
+            const button = buttons[1]; // Second button is Copy Claude Search URL
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.classList.add('copied');
+
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy URL: ', err);
+            // Try fallback method
+            const textArea = document.createElement("textarea");
+            textArea.value = claudeSearchUrl;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const buttons = document.querySelectorAll('.header-button');
+                const button = buttons[1];
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy URL to clipboard');
+            }
+            document.body.removeChild(textArea);
+        }
+    };
+
+    window.toggleMarkdown = function(messageIndex, showRendered) {
+        const messageDiv = document.getElementById(`message-${messageIndex}`);
+        const renderedContent = messageDiv.querySelector('.rendered-content');
+        const rawContent = messageDiv.querySelector('.raw-markdown');
+        const buttons = messageDiv.parentElement.querySelectorAll('.toggle-markdown');
+
+        if (showRendered) {
+            renderedContent.style.display = 'block';
+            rawContent.style.display = 'none';
+            buttons[0].classList.add('active');
+            buttons[1].classList.remove('active');
+        } else {
+            renderedContent.style.display = 'none';
+            rawContent.style.display = 'block';
+            buttons[0].classList.remove('active');
+            buttons[1].classList.add('active');
+        }
+    };
+
+    window.copyMessage = async function(messageIndex) {
+        const messageDiv = document.getElementById(`message-${messageIndex}`);
+        const rawText = messageDiv.getAttribute('data-raw-text');
+        const decodedText = rawText.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+        try {
+            await navigator.clipboard.writeText(decodedText);
+
+            // Show copied feedback
+            const copyButton = messageDiv.parentElement.querySelector('.copy-button');
+            const originalText = copyButton.textContent;
+            copyButton.textContent = 'Copied!';
+            copyButton.classList.add('copied');
+
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+                copyButton.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text to clipboard');
+        }
+    };
+
+    function extractArtifacts(message) {
+        const artifacts = [];
+
+        // Look for artifact tool results
+        if (message.content) {
+            message.content.forEach(content => {
+                if (content.type === 'tool_result' && content.name === 'artifacts') {
+                    artifacts.push(content);
+                }
+            });
+        }
+
+        return artifacts;
+    }
+
+    window.showArtifact = function(messageId) {
+        const msg = currentConversation.chat_messages.find(m => m.uuid === messageId);
+        const artifacts = extractArtifacts(msg);
+
+        if (artifacts.length > 0) {
+            artifactPanel.classList.add('active');
+            const artifactContent = JSON.stringify(artifacts[0], null, 2);
+            artifactPanel.innerHTML = `
+                    <div class="artifact-header">
+                        Artifact
+                        <button class="copy-button" style="float: right;" onclick="copyArtifact('${escapeHtml(artifactContent).replace(/"/g, '&quot;')}')">Copy</button>
+                    </div>
+                    <div class="artifact-content">${escapeHtml(artifactContent)}</div>
+                `;
+        }
+    };
+
+    window.copyArtifact = async function(artifactContent) {
+        const decodedText = artifactContent.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+        try {
+            await navigator.clipboard.writeText(decodedText);
+
+            // Show copied feedback
+            const copyButton = event.target;
+            const originalText = copyButton.textContent;
+            copyButton.textContent = 'Copied!';
+            copyButton.classList.add('copied');
+
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+                copyButton.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text to clipboard');
+        }
+    };
+
+    function highlightText(text, query) {
+        const escaped = escapeHtml(text);
+        const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+        return escaped.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function highlightHtml(html, query) {
+        // This is a simple implementation - for production, you'd want a more robust HTML-aware highlighter
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+
+        const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        const textNodes = [];
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+
+        textNodes.forEach(node => {
+            const text = node.textContent;
+            const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+            if (regex.test(text)) {
+                const span = document.createElement('span');
+                span.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+                node.parentNode.replaceChild(span, node);
+            }
+        });
+
+        return tempDiv.innerHTML;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    }
+
+    // Sidebar toggle functionality
+    window.toggleSidebar = function() {
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('sidebarToggle');
+        const arrow = toggleButton.querySelector('.toggle-arrow');
+
+        sidebar.classList.toggle('collapsed');
+
+        // Rotate arrow based on sidebar state
+        if (sidebar.classList.contains('collapsed')) {
+            arrow.style.transform = 'rotate(180deg)';
+        } else {
+            arrow.style.transform = 'rotate(0deg)';
+        }
+    };
+
+    // Resizable sidebar functionality
+    const resizeHandle = document.getElementById('resizeHandle');
+    const sidebar = document.getElementById('sidebar');
+    let isResizing = false;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizeHandle.classList.add('dragging');
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const newWidth = e.clientX;
+        if (newWidth >= 200 && newWidth <= window.innerWidth * 0.5) {
+            sidebar.style.width = newWidth + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        isResizing = false;
+        resizeHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+</script>
+</body>
+</html>
