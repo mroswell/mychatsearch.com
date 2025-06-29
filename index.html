@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Claude Conversation Search</title>
+    <title>AI Conversation Search</title>
     <style>
         * {
             margin: 0;
@@ -18,6 +18,18 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+        }
+
+        body.chatgpt-theme {
+            --primary-color: #10a37f;
+            --primary-hover: #0e9470;
+            --assistant-color: #10a37f;
+        }
+
+        body.claude-theme {
+            --primary-color: #C96342;
+            --primary-hover: #B5543A;
+            --assistant-color: #C96342;
         }
 
         .header {
@@ -49,17 +61,53 @@
         }
 
         .toggle-arrow {
+            width: 20px;
+            height: 20px;
             transition: transform 0.3s ease;
-        }
-
-        .sidebar.collapsed + .content-area .header .toggle-arrow {
-            transform: rotate(180deg);
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #7c3aed;
+            color: #333;
+        }
+
+        .service-toggle {
+            display: flex;
+            gap: 0.5rem;
+            background-color: #f3f4f6;
+            padding: 0.25rem;
+            border-radius: 8px;
+        }
+
+        .service-tab {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            background: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .service-tab:hover {
+            background-color: #e5e7eb;
+        }
+
+        .service-tab.active {
+            background-color: #fff;
+            color: #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .service-tab.chatgpt.active {
+            color: #10a37f;
+        }
+
+        .service-tab.claude.active {
+            color: #C96342;
         }
 
         .search-container {
@@ -85,7 +133,7 @@
 
         .search-box:focus {
             outline: none;
-            border-color: #7c3aed;
+            border-color: var(--primary-color, #7c3aed);
         }
 
         .clear-button {
@@ -141,11 +189,11 @@
         }
 
         .resize-handle:hover {
-            background-color: #7c3aed;
+            background-color: var(--primary-color, #7c3aed);
         }
 
         .resize-handle.dragging {
-            background-color: #7c3aed;
+            background-color: var(--primary-color, #7c3aed);
         }
 
         .search-results-header {
@@ -159,6 +207,10 @@
 
         .search-results-header.active {
             display: block;
+        }
+
+        body.claude-theme .search-results-header {
+            background-color: #FDF3F0;
         }
 
         .conversation-list {
@@ -178,12 +230,16 @@
 
         .conversation-item:hover {
             background-color: #f0f0f0;
-            border-color: #7c3aed;
+            border-color: var(--primary-color, #7c3aed);
         }
 
         .conversation-item.active {
             background-color: #f3e8ff;
-            border-color: #7c3aed;
+            border-color: var(--primary-color, #7c3aed);
+        }
+
+        body.claude-theme .conversation-item.active {
+            background-color: #FDF3F0;
         }
 
         .conversation-title {
@@ -286,8 +342,8 @@
         }
 
         .message-avatar {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background-color: #e0e0e0;
             display: flex;
@@ -299,12 +355,10 @@
 
         .message.human .message-avatar {
             background-color: #7c3aed;
-            color: white;
         }
 
         .message.assistant .message-avatar {
-            background-color: #10b981;
-            color: white;
+            background-color: var(--assistant-color, #10a37f);
         }
 
         .message-content {
@@ -422,7 +476,7 @@
         }
 
         .message-text a {
-            color: #7c3aed;
+            color: var(--primary-color, #7c3aed);
             text-decoration: none;
         }
 
@@ -488,7 +542,7 @@
         .file-input-label {
             display: inline-block;
             padding: 0.75rem 2rem;
-            background-color: #7c3aed;
+            background-color: var(--primary-color, #7c3aed);
             color: white;
             border-radius: 8px;
             cursor: pointer;
@@ -496,7 +550,7 @@
         }
 
         .file-input-label:hover {
-            background-color: #6d28d9;
+            background-color: var(--primary-hover, #6d28d9);
         }
 
         .file-input {
@@ -506,7 +560,7 @@
         .artifact-button {
             margin-top: 0.5rem;
             padding: 0.5rem 1rem;
-            background-color: #7c3aed;
+            background-color: var(--primary-color, #7c3aed);
             color: white;
             border: none;
             border-radius: 4px;
@@ -515,7 +569,7 @@
         }
 
         .artifact-button:hover {
-            background-color: #6d28d9;
+            background-color: var(--primary-hover, #6d28d9);
         }
 
         .conversation-suggestions {
@@ -546,7 +600,7 @@
         }
 
         .suggestion-card:hover {
-            border-color: #7c3aed;
+            border-color: var(--primary-color, #7c3aed);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             transform: translateY(-1px);
         }
@@ -589,14 +643,18 @@
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body>
+<body class="chatgpt-theme">
 <div class="header">
     <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
         <svg class="toggle-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
     </button>
-    <div class="logo">Claude Search</div>
+    <div class="logo">AI Search</div>
+    <div class="service-toggle">
+        <button class="service-tab chatgpt active" onclick="switchService('chatgpt')">ChatGPT</button>
+        <button class="service-tab claude" onclick="switchService('claude')">Claude</button>
+    </div>
     <div class="search-container">
         <div class="search-wrapper" id="searchWrapper">
             <input type="text" class="search-box" id="searchInput" placeholder="Search conversations..." disabled>
@@ -612,10 +670,10 @@
         <div id="searchResultsHeader" class="search-results-header"></div>
         <div id="conversationList" class="conversation-list">
             <div class="file-input-container">
-                <label for="fileInput" class="file-input-label">
+                <label for="fileInput-chatgpt" class="file-input-label">
                     Load<br>JSON file
                 </label>
-                <input type="file" id="fileInput" class="file-input" accept=".json,application/json">
+                <input type="file" id="fileInput-chatgpt" class="file-input" accept=".json,application/json">
             </div>
         </div>
     </div>
@@ -625,7 +683,7 @@
             <div class="no-results">
                 <div style="max-width: 600px; margin: 0 auto; text-align: left; line-height: 1.6;">
                     <ol style="padding-left: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;">Visit: <a href="https://claude.ai/settings/data-privacy-controls" target="_blank" style="color: #7c3aed;">https://claude.ai/settings/data-privacy-controls</a> to export your Claude conversations. Export is at the bottom of that page.</li>
+                        <li style="margin-bottom: 0.5rem;">Visit: <a href="https://chatgpt.com/#settings" target="_blank" style="color: var(--primary-color);">https://chatgpt.com/#settings</a> and click on the "Data Controls" tab to export your ChatGPT conversations. Export is at the bottom of the settings.</li>
                         <li style="margin-bottom: 0.5rem;">Download the file when the email arrives.</li>
                         <li style="margin-bottom: 0.5rem;">Unzip the file and identify the directory where your files reside.</li>
                         <li style="margin-bottom: 0.5rem;">Load your JSON export file (conversations.json) to begin searching.</li>
@@ -638,13 +696,16 @@
 </div>
 
 <script>
-    let conversations = [];
+    let currentService = 'chatgpt';
+    let conversations = {
+        chatgpt: [],
+        claude: []
+    };
     let filteredConversations = [];
     let currentConversation = null;
     let searchTimeout = null;
     let currentSearchQuery = '';
 
-    const fileInput = document.getElementById('fileInput');
     const searchInput = document.getElementById('searchInput');
     const conversationList = document.getElementById('conversationList');
     const chatView = document.getElementById('chatView');
@@ -653,37 +714,390 @@
     const searchResultsHeader = document.getElementById('searchResultsHeader');
     const clearButton = document.getElementById('clearButton');
 
-    fileInput.addEventListener('change', handleFileUpload);
+    // Initialize file input
+    const fileInput = document.getElementById('fileInput-chatgpt');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileUpload);
+    }
     searchInput.addEventListener('input', handleSearch);
+
+    // Service switching function
+    window.switchService = function(service) {
+        currentService = service;
+
+        // Update UI theme
+        document.body.className = `${service}-theme`;
+
+        // Update active tab
+        document.querySelectorAll('.service-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`.service-tab.${service}`).classList.add('active');
+
+        // Update placeholder text
+        searchInput.placeholder = `Search ${service === 'chatgpt' ? 'ChatGPT' : 'Claude'} conversations...`;
+
+        // Reset search
+        searchInput.value = '';
+        currentSearchQuery = '';
+        searchResultsHeader.classList.remove('active');
+
+        // Display conversations for current service
+        const serviceConversations = conversations[service];
+        if (serviceConversations.length > 0) {
+            displayConversations(serviceConversations);
+            showConversationSuggestions();
+        } else {
+            conversationList.innerHTML = `
+                <div class="file-input-container">
+                    <label for="fileInput-${service}" class="file-input-label">
+                        Load<br>JSON file
+                    </label>
+                    <input type="file" id="fileInput-${service}" class="file-input" accept=".json,application/json">
+                </div>
+            `;
+
+            // Re-attach file input listener
+            const newFileInput = document.getElementById(`fileInput-${service}`);
+            if (newFileInput) {
+                newFileInput.addEventListener('change', handleFileUpload);
+            }
+
+            chatView.innerHTML = `
+                <div class="no-results">
+                    <div style="max-width: 600px; margin: 0 auto; text-align: left; line-height: 1.6;">
+                        <ol style="padding-left: 1.5rem;">
+                            ${service === 'claude' ?
+                `<li style="margin-bottom: 0.5rem;">Visit: <a href="https://claude.ai/settings/data-privacy-controls" target="_blank" style="color: var(--primary-color);">https://claude.ai/settings/data-privacy-controls</a> to export your Claude conversations. Export is at the bottom of that page.</li>` :
+                `<li style="margin-bottom: 0.5rem;">Visit: <a href="https://chatgpt.com/#settings" target="_blank" style="color: var(--primary-color);">https://chatgpt.com/#settings</a> and click on the "Data Controls" tab to export your ChatGPT conversations. Export is at the bottom of the settings.</li>`
+            }
+                            <li style="margin-bottom: 0.5rem;">Download the file when the email arrives.</li>
+                            <li style="margin-bottom: 0.5rem;">Unzip the file and identify the directory where your files reside.</li>
+                            <li style="margin-bottom: 0.5rem;">Load your JSON export file (conversations.json) to begin searching.</li>
+                        </ol>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update stats
+        if (serviceConversations.length > 0) {
+            updateStats();
+        } else {
+            statsDiv.style.display = 'none';
+        }
+    };
+
+    // Detect export type
+    function detectExportType(data) {
+        console.log('Detecting export type for data:', data);
+
+        // ChatGPT format has conversations as array with mapping property
+        if (Array.isArray(data) && data.length > 0) {
+            // Check if it has ChatGPT structure (mapping, create_time, etc.)
+            if (data[0]?.mapping && data[0]?.create_time && data[0]?.conversation_id) {
+                console.log('Detected ChatGPT format');
+                return 'chatgpt';
+            }
+        }
+
+        // Claude format detection
+        console.log('Detected Claude format');
+        return 'claude';
+    }
+
+    // Parse ChatGPT export
+    function parseChatGPTExport(data) {
+        console.log('Parsing ChatGPT export, conversations:', data.length);
+
+        let successCount = 0;
+        let failCount = 0;
+        const errors = [];
+
+        const parsed = data.map((conv, index) => {
+            try {
+                // Extract messages from the mapping
+                const messages = [];
+                const mapping = conv.mapping;
+
+                if (!mapping) {
+                    console.warn(`Conversation ${index} has no mapping`);
+                    failCount++;
+                    return null;
+                }
+
+                // Find all root messages (some conversations have multiple roots)
+                const rootIds = [];
+                Object.keys(mapping).forEach(id => {
+                    const node = mapping[id];
+                    if (node && (node.parent === 'client-created-root' || node.parent === null)) {
+                        rootIds.push(id);
+                    }
+                });
+
+                if (rootIds.length === 0) {
+                    console.warn(`Conversation ${index}: "${conv.title}" has no root messages`);
+                    failCount++;
+                    return null;
+                }
+
+                // Traverse from each root
+                const visited = new Set();
+                rootIds.forEach(rootId => {
+                    traverseMessages(rootId, mapping, messages, visited);
+                });
+
+                // Sort messages by creation time
+                messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+                if (messages.length === 0) {
+                    console.warn(`Conversation ${index}: "${conv.title}" has no valid messages after parsing`);
+                    failCount++;
+                    return null;
+                }
+
+                successCount++;
+
+                // Log progress every 10 conversations
+                if (successCount % 10 === 0) {
+                    console.log(`Parsed ${successCount} conversations so far...`);
+                }
+
+                return {
+                    uuid: conv.id || conv.conversation_id,
+                    name: conv.title || 'Untitled Conversation',
+                    created_at: new Date(conv.create_time * 1000).toISOString(),
+                    updated_at: new Date(conv.update_time * 1000).toISOString(),
+                    chat_messages: messages
+                };
+            } catch (error) {
+                console.error(`Error parsing conversation ${index} ("${conv.title}"):`, error);
+                errors.push({ index, title: conv.title, error: error.message });
+                failCount++;
+                return null;
+            }
+        }).filter(conv => conv !== null);
+
+        console.log(`ChatGPT parsing complete:
+- Total conversations: ${data.length}
+- Successfully parsed: ${successCount}
+- Failed to parse: ${failCount}`);
+
+        if (errors.length > 0 && errors.length <= 5) {
+            console.error('Parse errors:', errors);
+        } else if (errors.length > 5) {
+            console.error(`First 5 parse errors:`, errors.slice(0, 5));
+            console.error(`... and ${errors.length - 5} more errors`);
+        }
+
+        return parsed;
+    }
+
+    // Traverse ChatGPT message tree
+    function traverseMessages(messageId, mapping, messages, visited = new Set()) {
+        // Prevent infinite loops
+        if (visited.has(messageId)) return;
+        visited.add(messageId);
+
+        const node = mapping[messageId];
+        if (!node) {
+            console.warn(`Missing node for messageId: ${messageId}`);
+            return;
+        }
+
+        if (!node.message) {
+            // Some nodes might not have messages (e.g., branch points)
+            if (node.children && Array.isArray(node.children)) {
+                node.children.forEach(childId => {
+                    traverseMessages(childId, mapping, messages, visited);
+                });
+            }
+            return;
+        }
+
+        const msg = node.message;
+
+        // Only process user and assistant messages
+        if (msg.author && (msg.author.role === 'user' || msg.author.role === 'assistant')) {
+            let text = '';
+
+            // Extract text from content
+            if (msg.content) {
+                if (msg.content.parts && Array.isArray(msg.content.parts)) {
+                    // Filter out any null/undefined parts and join
+                    text = msg.content.parts.filter(part => part != null).join('\n');
+                } else if (msg.content.text) {
+                    text = msg.content.text;
+                } else if (typeof msg.content === 'string') {
+                    text = msg.content;
+                }
+            }
+
+            // Clean up ChatGPT special formatting characters and citations
+            if (text) {
+                // Remove Unicode special characters used by ChatGPT for formatting
+                text = text.replace(/[\ue200-\ue206]/g, '');
+
+                // Remove citation markers like "citeturn0search0" or "turn0news8"
+                text = text.replace(/cite\s*turn\d+\w+\d+/g, '');
+                text = text.replace(/turn\d+\w+\d+/g, '');
+
+                // Clean up any resulting double spaces or empty brackets
+                text = text.replace(/\[\s*\]/g, '');
+                text = text.replace(/\(\s*\)/g, '');
+                text = text.replace(/\s+/g, ' ');
+                text = text.trim();
+            }
+
+            // Only add messages with actual content after cleaning
+            if (text && text.trim()) {
+                messages.push({
+                    uuid: msg.id || `msg-${messageId}`,
+                    sender: msg.author.role === 'user' ? 'human' : 'assistant',
+                    text: text,
+                    created_at: msg.create_time ? new Date(msg.create_time * 1000).toISOString() : new Date().toISOString(),
+                    content: [{
+                        type: 'text',
+                        text: text
+                    }]
+                });
+            }
+        }
+
+        // Traverse children
+        if (node.children && Array.isArray(node.children)) {
+            node.children.forEach(childId => {
+                traverseMessages(childId, mapping, messages, visited);
+            });
+        }
+    }
+
+    // Parse Claude export - Fixed to properly extract messages
+    function parseClaudeExport(data) {
+        console.log('Parsing Claude export');
+
+        let claudeConvs = [];
+
+        // Handle different possible structures
+        if (Array.isArray(data)) {
+            claudeConvs = data;
+        } else if (data.chats) {
+            claudeConvs = data.chats;
+        } else if (data.conversations) {
+            claudeConvs = data.conversations;
+        } else {
+            // If the data is a single object with UUID keys, convert to array
+            claudeConvs = Object.keys(data).map(key => {
+                const conv = data[key];
+                // Ensure the conversation has a uuid
+                if (!conv.uuid) {
+                    conv.uuid = key;
+                }
+                return conv;
+            });
+        }
+
+        // Ensure each conversation has properly structured messages
+        claudeConvs = claudeConvs.map(conv => {
+            // If chat_messages doesn't exist but messages does, rename it
+            if (!conv.chat_messages && conv.messages) {
+                conv.chat_messages = conv.messages;
+            }
+
+            // Ensure all messages have required fields
+            if (conv.chat_messages && Array.isArray(conv.chat_messages)) {
+                conv.chat_messages = conv.chat_messages.map(msg => {
+                    // Ensure message has text field
+                    if (!msg.text && msg.content) {
+                        if (Array.isArray(msg.content)) {
+                            // Extract text from content array
+                            const textContent = msg.content.find(c => c.type === 'text');
+                            if (textContent) {
+                                msg.text = textContent.text;
+                            }
+                        } else if (typeof msg.content === 'string') {
+                            msg.text = msg.content;
+                        }
+                    }
+
+                    // Ensure message has sender field
+                    if (!msg.sender && msg.role) {
+                        msg.sender = msg.role === 'user' ? 'human' : msg.role;
+                    }
+
+                    return msg;
+                });
+            }
+
+            return conv;
+        });
+
+        console.log(`Parsed ${claudeConvs.length} Claude conversations`);
+        return claudeConvs;
+    }
 
     async function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
+        console.log('Loading file:', file.name, 'Size:', file.size);
+        console.log('Current service before loading:', currentService);
+
         try {
             const text = await file.text();
+            console.log('File loaded, parsing JSON...');
             const data = JSON.parse(text);
+            console.log('JSON parsed successfully. Type of data:', typeof data, 'Is Array:', Array.isArray(data));
 
-            // Handle different possible structures
-            if (Array.isArray(data)) {
-                conversations = data;
-            } else if (data.chats) {
-                conversations = data.chats;
-            } else if (data.conversations) {
-                conversations = data.conversations;
+            // Detect export type
+            const exportType = detectExportType(data);
+            console.log('Detected export type:', exportType);
+
+            if (exportType === 'chatgpt') {
+                // Clear previous ChatGPT data to avoid conflicts
+                conversations.chatgpt = [];
+
+                // Switch to ChatGPT tab if not already
+                if (currentService !== 'chatgpt') {
+                    console.log('Switching to ChatGPT service');
+                    switchService('chatgpt');
+                }
+                conversations.chatgpt = parseChatGPTExport(data);
+                console.log('Parsed ChatGPT conversations:', conversations.chatgpt.length);
+
+                // Log a sample conversation to check structure
+                if (conversations.chatgpt.length > 0) {
+                    console.log('Sample ChatGPT conversation:', conversations.chatgpt[0]);
+                    console.log('Sample messages:', conversations.chatgpt[0].chat_messages?.slice(0, 2));
+                }
             } else {
-                // If the data is a single object with UUID keys (like your sample)
-                conversations = Object.values(data);
+                // Clear previous Claude data to avoid conflicts
+                conversations.claude = [];
+
+                // Handle Claude format
+                if (currentService !== 'claude') {
+                    console.log('Switching to Claude service');
+                    switchService('claude');
+                }
+
+                conversations.claude = parseClaudeExport(data);
+                console.log('Parsed Claude conversations:', conversations.claude.length);
+
+                // Log a sample conversation to check structure
+                if (conversations.claude.length > 0) {
+                    console.log('Sample Claude conversation:', conversations.claude[0]);
+                    console.log('Sample messages:', conversations.claude[0].chat_messages?.slice(0, 2));
+                }
             }
 
             // Sort conversations by date (newest first)
-            conversations.sort((a, b) => {
+            conversations[currentService].sort((a, b) => {
                 const dateA = new Date(a.created_at || 0);
                 const dateB = new Date(b.created_at || 0);
                 return dateB - dateA;
             });
 
-            console.log('Loaded conversations:', conversations.length);
+            console.log(`Loaded ${currentService} conversations:`, conversations[currentService].length);
 
             // Enable search controls
             searchInput.disabled = false;
@@ -691,21 +1105,26 @@
 
             statsDiv.style.display = 'block';
             updateStats();
-            displayConversations(conversations);
+            displayConversations(conversations[currentService]);
             showConversationSuggestions();
+
+            // Reset file input so the same file can be loaded again
+            event.target.value = '';
 
         } catch (error) {
             console.error('Error details:', error);
-            alert('Error loading file: ' + error.message);
+            console.error('Error stack:', error.stack);
+            alert(`Error loading file: ${error.message}\n\nMake sure you're loading the correct export type for the selected service.`);
         }
     }
 
     function updateStats() {
-        const totalMessages = conversations.reduce((sum, conv) =>
+        const serviceConversations = conversations[currentService];
+        const totalMessages = serviceConversations.reduce((sum, conv) =>
             sum + (conv.chat_messages?.length || 0), 0);
 
         statsDiv.innerHTML = `
-                <div><strong>${conversations.length}</strong> conversations</div>
+                <div><strong>${serviceConversations.length}</strong> ${currentService === 'chatgpt' ? 'ChatGPT' : 'Claude'} conversations</div>
                 <div><strong>${totalMessages}</strong> total messages</div>
             `;
     }
@@ -716,14 +1135,16 @@
             const query = searchInput.value.toLowerCase().trim();
             currentSearchQuery = query;
 
+            const serviceConversations = conversations[currentService];
+
             if (!query) {
-                filteredConversations = conversations;
+                filteredConversations = serviceConversations;
                 searchResultsHeader.classList.remove('active');
-                displayConversations(conversations);
+                displayConversations(serviceConversations);
                 return;
             }
 
-            filteredConversations = conversations.filter(conv => {
+            filteredConversations = serviceConversations.filter(conv => {
                 // Search in conversation name
                 if (conv.name?.toLowerCase().includes(query)) return true;
 
@@ -743,9 +1164,9 @@
     function clearSearch() {
         searchInput.value = '';
         currentSearchQuery = '';
-        filteredConversations = conversations;
+        filteredConversations = conversations[currentService];
         searchResultsHeader.classList.remove('active');
-        displayConversations(conversations);
+        displayConversations(conversations[currentService]);
 
         // Clear the detail view and show suggestions
         artifactPanel.classList.remove('active');
@@ -754,18 +1175,19 @@
     }
 
     function showConversationSuggestions() {
-        if (conversations.length === 0) {
-            chatView.innerHTML = '<div class="no-results">Load your Claude JSON export file to begin</div>';
+        const serviceConversations = conversations[currentService];
+        if (serviceConversations.length === 0) {
+            chatView.innerHTML = '<div class="no-results">Load your export file to begin</div>';
             return;
         }
 
         // Get 4 random conversations
-        const shuffled = [...conversations].sort(() => 0.5 - Math.random());
-        const suggestions = shuffled.slice(0, Math.min(4, conversations.length));
+        const shuffled = [...serviceConversations].sort(() => 0.5 - Math.random());
+        const suggestions = shuffled.slice(0, Math.min(4, serviceConversations.length));
 
         let suggestionsHtml = `
                 <div class="conversation-suggestions">
-                    <div class="suggestions-title">Explore Conversations</div>
+                    <div class="suggestions-title">Explore ${currentService === 'chatgpt' ? 'ChatGPT' : 'Claude'} Conversations</div>
                     <button class="shuffle-button" onclick="showConversationSuggestions()">
                         <svg class="shuffle-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -788,7 +1210,7 @@
     }
 
     window.selectConversation = function(conversationId) {
-        const conv = conversations.find(c => c.uuid === conversationId);
+        const conv = conversations[currentService].find(c => c.uuid === conversationId);
         if (conv) {
             displayConversation(conv, currentSearchQuery);
 
@@ -839,26 +1261,53 @@
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
-                const conv = conversations.find(c => c.uuid === id);
-                displayConversation(conv, currentSearchQuery);
+                const conv = conversations[currentService].find(c => c.uuid === id);
+                if (conv) {
+                    console.log('Displaying conversation:', conv.name, 'Messages:', conv.chat_messages?.length);
+                    displayConversation(conv, currentSearchQuery);
 
-                // Update active state
-                document.querySelectorAll('.conversation-item').forEach(i =>
-                    i.classList.remove('active'));
-                item.classList.add('active');
+                    // Update active state
+                    document.querySelectorAll('.conversation-item').forEach(i =>
+                        i.classList.remove('active'));
+                    item.classList.add('active');
+                } else {
+                    console.error('Conversation not found:', id);
+                }
             });
         });
     }
 
     function displayConversation(conv, searchQuery = '') {
+        console.log('displayConversation called:', conv);
+        console.log('Current service:', currentService);
+
         currentConversation = conv;
         artifactPanel.classList.remove('active');
         artifactPanel.innerHTML = '';
 
+        if (!conv) {
+            console.error('No conversation object provided');
+            chatView.innerHTML = '<div class="no-results">Error: Conversation not found</div>';
+            return;
+        }
+
+        console.log('Conversation details:', {
+            name: conv.name,
+            uuid: conv.uuid,
+            created_at: conv.created_at,
+            messagesExist: !!conv.chat_messages,
+            messageCount: conv.chat_messages?.length || 0
+        });
+
         if (!conv.chat_messages || conv.chat_messages.length === 0) {
+            console.warn('No messages in conversation:', conv.name);
+            console.warn('Full conversation object:', conv);
             chatView.innerHTML = '<div class="no-results">No messages in this conversation</div>';
             return;
         }
+
+        console.log(`Displaying ${conv.chat_messages.length} messages`);
+        console.log('First message:', conv.chat_messages[0]);
 
         // Add conversation title at the top
         const conversationTitle = conv.name || 'Untitled Conversation';
@@ -869,7 +1318,7 @@
                 <div class="header-top">
                     <span class="header-title">${escapeHtml(conversationTitle)}</span>
                     <button class="header-button" onclick="copyTitle('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">Copy Title</button>
-                    <button class="header-button" onclick="copyClaudeSearchUrl('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">Copy Claude Search URL</button>
+                    <button class="header-button" onclick="copyClaudeSearchUrl('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">${currentService === 'chatgpt' ? 'Copy ChatGPT Search URL' : 'Copy Claude Search URL'}</button>
                 </div>
                 <div class="header-date">${conversationDate}</div>
             </div>
@@ -915,6 +1364,7 @@
         }).join('');
 
         chatView.innerHTML = messagesHtml;
+        console.log('Conversation displayed successfully');
     }
 
     window.copyTitle = async function(title) {
@@ -962,14 +1412,16 @@
     window.copyClaudeSearchUrl = async function(title) {
         // URL encode the title to handle spaces and special characters
         const encodedTitle = encodeURIComponent(title);
-        const claudeSearchUrl = `https://claude.ai/recents?search=${encodedTitle}`;
+        const searchUrl = currentService === 'chatgpt' ?
+            `https://chatgpt.com/?q=${encodedTitle}` :
+            `https://claude.ai/recents?search=${encodedTitle}`;
 
         try {
-            await navigator.clipboard.writeText(claudeSearchUrl);
+            await navigator.clipboard.writeText(searchUrl);
 
             // Show copied feedback
             const buttons = document.querySelectorAll('.header-button');
-            const button = buttons[1]; // Second button is Copy Claude Search URL
+            const button = buttons[1]; // Second button is Copy Search URL
             const originalText = button.textContent;
             button.textContent = 'Copied!';
             button.classList.add('copied');
@@ -982,7 +1434,7 @@
             console.error('Failed to copy URL: ', err);
             // Try fallback method
             const textArea = document.createElement("textarea");
-            textArea.value = claudeSearchUrl;
+            textArea.value = searchUrl;
             textArea.style.position = "fixed";
             textArea.style.left = "-999999px";
             document.body.appendChild(textArea);
