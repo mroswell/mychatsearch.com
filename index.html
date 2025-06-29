@@ -917,7 +917,7 @@
 
         const msg = node.message;
 
-        // Only process user and assistant messages
+        // Only process user and assistant messages (skip tool and system messages)
         if (msg.author && (msg.author.role === 'user' || msg.author.role === 'assistant')) {
             let text = '';
 
@@ -933,6 +933,21 @@
                 }
             }
 
+            // Skip messages that look like system/tool responses
+            if (text && (
+                text.includes('"nextTranscriptToken"') ||
+                text.includes('"transcriptToken"') ||
+                text.trim().startsWith('{') && text.includes('"token"')
+            )) {
+                // Skip this message - it's a system/tool message
+                if (node.children && Array.isArray(node.children)) {
+                    node.children.forEach(childId => {
+                        traverseMessages(childId, mapping, messages, visited);
+                    });
+                }
+                return;
+            }
+
             // Clean up ChatGPT special formatting characters and citations
             if (text) {
                 // Remove Unicode special characters used by ChatGPT for formatting
@@ -946,6 +961,16 @@
                 text = text.replace(/\[\s*\]/g, '');
                 text = text.replace(/\(\s*\)/g, '');
                 text = text.replace(/\s+/g, ' ');
+
+                // Fix numbered lists to ensure proper line breaks
+                text = text.replace(/(\d+\.\s+)/g, '\n\n$1');
+
+                // Fix bullet points to ensure proper line breaks
+                text = text.replace(/(\n)?(\s*)([-•*])\s+/g, '\n\n$2$3 ');
+
+                // Clean up any triple or more line breaks
+                text = text.replace(/\n{3,}/g, '\n\n');
+
                 text = text.trim();
             }
 
@@ -1318,7 +1343,7 @@
                 <div class="header-top">
                     <span class="header-title">${escapeHtml(conversationTitle)}</span>
                     <button class="header-button" onclick="copyTitle('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">Copy Title</button>
-                    <button class="header-button" onclick="copyClaudeSearchUrl('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">${currentService === 'chatgpt' ? 'Copy ChatGPT Search URL' : 'Copy Claude Search URL'}</button>
+                    <button class="header-button" onclick="copyOrVisit('${escapeHtml(conversationTitle).replace(/'/g, "\\'")}')">${currentService === 'chatgpt' ? 'Visit ChatGPT' : 'Copy Claude Search URL'}</button>
                 </div>
                 <div class="header-date">${conversationDate}</div>
             </div>
@@ -1409,51 +1434,54 @@
         }
     };
 
-    window.copyClaudeSearchUrl = async function(title) {
-        // URL encode the title to handle spaces and special characters
-        const encodedTitle = encodeURIComponent(title);
-        const searchUrl = currentService === 'chatgpt' ?
-            `https://chatgpt.com/?q=${encodedTitle}` :
-            `https://claude.ai/recents?search=${encodedTitle}`;
+    window.copyOrVisit = async function(title) {
+        if (currentService === 'chatgpt') {
+            // For ChatGPT, just open the homepage in a new tab
+            window.open('https://chatgpt.com', '_blank');
+        } else {
+            // For Claude, copy the search URL to clipboard
+            const encodedTitle = encodeURIComponent(title);
+            const searchUrl = `https://claude.ai/recents?search=${encodedTitle}`;
 
-        try {
-            await navigator.clipboard.writeText(searchUrl);
-
-            // Show copied feedback
-            const buttons = document.querySelectorAll('.header-button');
-            const button = buttons[1]; // Second button is Copy Search URL
-            const originalText = button.textContent;
-            button.textContent = 'Copied!';
-            button.classList.add('copied');
-
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('copied');
-            }, 2000);
-        } catch (err) {
-            console.error('Failed to copy URL: ', err);
-            // Try fallback method
-            const textArea = document.createElement("textarea");
-            textArea.value = searchUrl;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-999999px";
-            document.body.appendChild(textArea);
-            textArea.select();
             try {
-                document.execCommand('copy');
+                await navigator.clipboard.writeText(searchUrl);
+
+                // Show copied feedback
                 const buttons = document.querySelectorAll('.header-button');
-                const button = buttons[1];
+                const button = buttons[1]; // Second button
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';
                 button.classList.add('copied');
+
                 setTimeout(() => {
                     button.textContent = originalText;
                     button.classList.remove('copied');
                 }, 2000);
             } catch (err) {
-                alert('Failed to copy URL to clipboard');
+                console.error('Failed to copy URL: ', err);
+                // Try fallback method
+                const textArea = document.createElement("textarea");
+                textArea.value = searchUrl;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const buttons = document.querySelectorAll('.header-button');
+                    const button = buttons[1];
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    alert('Failed to copy URL to clipboard');
+                }
+                document.body.removeChild(textArea);
             }
-            document.body.removeChild(textArea);
         }
     };
 
