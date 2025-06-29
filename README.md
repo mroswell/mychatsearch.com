@@ -30,11 +30,18 @@ A local web application for searching through your exported Claude AI conversati
 
 ### Installation
 
+You have two options:
+
+#### Option 1: Use the hosted version (easiest)
+1. Visit https://mroswell.github.io/ai-search/
+2. That's it! The tool is ready to use.
+
+#### Option 2: Run locally
 1. Download the `index.html` file from this repository
 2. Save it anywhere on your computer
 3. Double-click the file to open it in your browser
 
-That's it! No installation or server setup required.
+Both options work exactly the same way - your data never leaves your browser.
 
 ## Usage
 
