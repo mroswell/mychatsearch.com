@@ -63,8 +63,9 @@ Both options work exactly the same way - your data never leaves your browser.
 - Click any conversation in the sidebar to view its messages
 - Toggle between rendered markdown and raw markdown view
 - Copy individual prompts and messages with the "Copy" button
-- Use "Copy Title" to copy just the conversation name
-- Use "Copy Claude Search URL" to get a link that searches for this conversation in Claude. This is helpful since Claude exports do not include all artifacts or file uploads.
+- Click "Copy Title" to copy just the conversation name
+- Click "Copy Claude Search URL" to get a link that searches for this conversation in Claude. This is helpful since Claude exports do not include all artifacts or file uploads.
+- Likewise, Click "Visit ChatGPT.com"  to search a copied title on chatgpt.com. (Click "Search chats")
 
 ### Interface Features
 
