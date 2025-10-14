@@ -33,7 +33,7 @@ A local web application for searching through your exported Claude AI conversati
 You have two options:
 
 #### Option 1: Use the hosted version (easiest)
-1. Visit https://mroswell.github.io/ai-search/
+1. Visit https://mychatsearch.com
 2. That's it! The tool is ready to use.
 
 #### Option 2: Run locally
