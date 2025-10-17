@@ -229,33 +229,28 @@
             transition: all 0.2s;
         }
 
-        .conversation-item:hover {
-            background-color: #f0f0f0;
-            border-color: var(--primary-color, #7c3aed);
+        /* Hover preview state (lighter highlight - 75% intensity of active) */
+        .conversation-item.hover {
+            background-color: #d1fae5;
+            border-color: #6ee7b7;
         }
 
-        /* Disable hover effects during keyboard navigation */
-        body.keyboard-nav .conversation-item:hover {
-            background-color: #fff;
-            border-color: #e0e0e0;
+        body.claude-theme .conversation-item.hover {
+            background-color: #fce8de;
+            border-color: #e4b8a0;
         }
 
-        body.keyboard-nav .conversation-item.active:hover {
+        /* Active/locked selection state - keep full color even when hovered */
+        .conversation-item.active,
+        .conversation-item.active.hover {
             background-color: #ecfdf5;
             border-color: var(--primary-color, #10a37f);
         }
 
-        body.keyboard-nav.claude-theme .conversation-item.active:hover {
+        body.claude-theme .conversation-item.active,
+        body.claude-theme .conversation-item.active.hover {
             background-color: #FDF3F0;
-        }
-
-        .conversation-item.active {
-            background-color: #ecfdf5; /* Even lighter green default */
-            border-color: var(--primary-color, #10a37f);
-        }
-
-        body.claude-theme .conversation-item.active {
-            background-color: #FDF3F0;
+            border-color: var(--primary-color, #C96342);
         }
 
         .conversation-title {
@@ -757,35 +752,105 @@
                 max-width: 100%;
             }
         }
+
+        /* Accessibility improvements */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #000;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            z-index: 100;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Focus visible styles */
+        *:focus-visible {
+            outline: 3px solid var(--primary-color, #7c3aed);
+            outline-offset: 2px;
+        }
+
+        .conversation-item:focus-visible {
+            outline: 3px solid var(--primary-color, #7c3aed);
+            outline-offset: -2px;
+        }
+
+        button:focus-visible {
+            outline: 3px solid var(--primary-color, #7c3aed);
+            outline-offset: 2px;
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* Screen reader announcements */
+        .sr-announcements {
+            position: absolute;
+            left: -10000px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="chatgpt-theme">
-<div class="header">
-    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
-        <svg class="toggle-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- Screen reader announcements -->
+<div aria-live="polite" aria-atomic="true" class="sr-announcements" id="announcements"></div>
+
+<header class="header">
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="sidebar">
+        <svg class="toggle-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
     </button>
-    <div class="logo">AI Search</div>
-    <div class="service-toggle">
-        <button class="service-tab chatgpt active" onclick="switchService('chatgpt')">ChatGPT</button>
-        <button class="service-tab claude" onclick="switchService('claude')">Claude</button>
-    </div>
-    <div class="search-container">
+    <h1 class="logo">AI Search</h1>
+    <nav class="service-toggle" aria-label="AI service selection">
+        <button class="service-tab chatgpt active" onclick="switchService('chatgpt')" aria-pressed="true">ChatGPT</button>
+        <button class="service-tab claude" onclick="switchService('claude')" aria-pressed="false">Claude</button>
+    </nav>
+    <div class="search-container" role="search">
+        <label for="searchInput" class="sr-only">Search conversations</label>
         <div class="search-wrapper" id="searchWrapper">
-            <input type="text" class="search-box" id="searchInput" placeholder="Search conversations..." disabled>
-            <button class="clear-button" id="clearButton" onclick="clearSearch()" disabled>Clear</button>
+            <input type="text" class="search-box" id="searchInput" placeholder="Search conversations..." disabled aria-describedby="search-instructions">
+            <button class="clear-button" id="clearButton" onclick="clearSearch()" disabled aria-label="Clear search">Clear</button>
         </div>
+        <div id="search-instructions" class="sr-only">Type to search conversations. Use commas to search for multiple terms.</div>
     </div>
-</div>
+</header>
 
 <div class="main-container">
-    <div class="sidebar" id="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Conversations list">
         <div class="resize-handle" id="resizeHandle"></div>
         <div id="stats" class="stats" style="display: none;"></div>
-        <div id="searchResultsHeader" class="search-results-header"></div>
-        <div id="conversationList" class="conversation-list">
+        <div id="searchResultsHeader" class="search-results-header" role="status" aria-live="polite"></div>
+        <div id="conversationList" class="conversation-list" role="list">
             <div class="file-input-container">
                 <label for="fileInput-chatgpt" class="file-input-label">
                     Load<br>JSON file
@@ -793,10 +858,10 @@
                 <input type="file" id="fileInput-chatgpt" class="file-input" accept=".json,application/json">
             </div>
         </div>
-    </div>
+    </aside>
 
-    <div class="content-area">
-        <div id="chatView" class="chat-view">
+    <main class="content-area" id="main-content">
+        <div id="chatView" class="chat-view" role="region" aria-label="Conversation display">
             <div class="no-results">
                 <div style="max-width: 600px; margin: 0 auto; text-align: left; line-height: 1.6;">
                     <ol style="padding-left: 1.5rem;">
@@ -809,10 +874,10 @@
             </div>
         </div>
         <div id="artifactPanel" class="artifact-panel"></div>
-    </div>
+    </main>
 </div>
 
-<button class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()">
+<button class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()" aria-label="Scroll to top">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
     </svg>
@@ -860,11 +925,9 @@
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            document.body.classList.add('keyboard-nav');
             newIndex = currentIndex < conversationItems.length - 1 ? currentIndex + 1 : currentIndex;
         } else if (event.key === 'ArrowUp') {
             event.preventDefault();
-            document.body.classList.add('keyboard-nav');
             newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
         } else {
             return; // Not an arrow key we care about
@@ -873,6 +936,10 @@
         if (newIndex !== currentIndex && newIndex >= 0) {
             const newItem = conversationItems[newIndex];
             const conversationId = newItem.dataset.id;
+
+            // Clear all hover states when using keyboard navigation
+            document.querySelectorAll('.conversation-item').forEach(i =>
+                i.classList.remove('hover'));
 
             // Trigger the conversation selection
             selectConversation(conversationId);
@@ -1481,16 +1548,13 @@
         // Add click handlers
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.addEventListener('click', () => {
-                // Switch to mouse navigation mode
-                document.body.classList.remove('keyboard-nav');
-
                 const id = item.dataset.id;
                 const conv = conversations[currentService].find(c => c.uuid === id);
                 if (conv) {
                     console.log('Displaying conversation:', conv.name, 'Messages:', conv.chat_messages?.length);
                     displayConversation(conv, searchTerms);
 
-                    // Update active state
+                    // Update active state (locked selection)
                     document.querySelectorAll('.conversation-item').forEach(i =>
                         i.classList.remove('active'));
                     item.classList.add('active');
@@ -1499,18 +1563,14 @@
                 }
             });
 
-            // Re-enable hover effects when mouse moves and update active state
+            // Add hover preview (light highlight)
             item.addEventListener('mouseenter', () => {
-                document.body.classList.remove('keyboard-nav');
+                item.classList.add('hover');
+            });
 
-                // Update active state to follow mouse
-                const id = item.dataset.id;
-                const conv = conversations[currentService].find(c => c.uuid === id);
-                if (conv) {
-                    document.querySelectorAll('.conversation-item').forEach(i =>
-                        i.classList.remove('active'));
-                    item.classList.add('active');
-                }
+            // Remove hover preview when mouse leaves
+            item.addEventListener('mouseleave', () => {
+                item.classList.remove('hover');
             });
         });
     }
