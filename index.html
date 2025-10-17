@@ -234,6 +234,21 @@
             border-color: var(--primary-color, #7c3aed);
         }
 
+        /* Disable hover effects during keyboard navigation */
+        body.keyboard-nav .conversation-item:hover {
+            background-color: #fff;
+            border-color: #e0e0e0;
+        }
+
+        body.keyboard-nav .conversation-item.active:hover {
+            background-color: #ecfdf5;
+            border-color: var(--primary-color, #10a37f);
+        }
+
+        body.keyboard-nav.claude-theme .conversation-item.active:hover {
+            background-color: #FDF3F0;
+        }
+
         .conversation-item.active {
             background-color: #ecfdf5; /* Even lighter green default */
             border-color: var(--primary-color, #10a37f);
@@ -828,6 +843,44 @@
         fileInput.addEventListener('change', handleFileUpload);
     }
     searchInput.addEventListener('input', handleSearch);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', handleKeyboardNavigation);
+
+    function handleKeyboardNavigation(event) {
+        // Only handle arrow keys when not typing in search box
+        if (document.activeElement === searchInput) return;
+
+        const conversationItems = Array.from(document.querySelectorAll('.conversation-item'));
+        if (conversationItems.length === 0) return;
+
+        const activeItem = document.querySelector('.conversation-item.active');
+        let currentIndex = activeItem ? conversationItems.indexOf(activeItem) : -1;
+        let newIndex = currentIndex;
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            document.body.classList.add('keyboard-nav');
+            newIndex = currentIndex < conversationItems.length - 1 ? currentIndex + 1 : currentIndex;
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            document.body.classList.add('keyboard-nav');
+            newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
+        } else {
+            return; // Not an arrow key we care about
+        }
+
+        if (newIndex !== currentIndex && newIndex >= 0) {
+            const newItem = conversationItems[newIndex];
+            const conversationId = newItem.dataset.id;
+
+            // Trigger the conversation selection
+            selectConversation(conversationId);
+
+            // Scroll the conversation item into view in the sidebar
+            newItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
 
     // Service switching function
     window.switchService = function(service) {
@@ -1428,6 +1481,9 @@
         // Add click handlers
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.addEventListener('click', () => {
+                // Switch to mouse navigation mode
+                document.body.classList.remove('keyboard-nav');
+
                 const id = item.dataset.id;
                 const conv = conversations[currentService].find(c => c.uuid === id);
                 if (conv) {
@@ -1440,6 +1496,20 @@
                     item.classList.add('active');
                 } else {
                     console.error('Conversation not found:', id);
+                }
+            });
+
+            // Re-enable hover effects when mouse moves and update active state
+            item.addEventListener('mouseenter', () => {
+                document.body.classList.remove('keyboard-nav');
+
+                // Update active state to follow mouse
+                const id = item.dataset.id;
+                const conv = conversations[currentService].find(c => c.uuid === id);
+                if (conv) {
+                    document.querySelectorAll('.conversation-item').forEach(i =>
+                        i.classList.remove('active'));
+                    item.classList.add('active');
                 }
             });
         });
