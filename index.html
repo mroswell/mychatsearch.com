@@ -227,6 +227,11 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+            font-size: inherit;
+            display: block;
         }
 
         /* Hover preview state (lighter highlight - 75% intensity of active) */
@@ -1537,11 +1542,11 @@
             }
 
             return `
-                    <div class="conversation-item" data-id="${conv.uuid}">
+                    <button class="conversation-item" role="listitem" data-id="${conv.uuid}" type="button">
                         <div class="conversation-title">${escapeHtml(conv.name || 'Untitled')}</div>
                         <div class="conversation-date">${formatDate(conv.created_at)}</div>
                         ${preview ? `<div class="conversation-preview">${highlightMultipleTerms(preview, searchTerms)}</div>` : ''}
-                    </div>
+                    </button>
                 `;
         }).join('');
 
