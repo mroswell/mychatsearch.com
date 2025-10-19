@@ -1,29 +1,48 @@
-# Claude Conversation Search
+# My Chat Search
 
-A local web application for searching through your exported Claude AI conversations. This tool runs entirely in your browser with no server required, keeping your data completely private.
+A local web application for searching through your exported AI conversations from ChatGPT and Claude. This tool runs entirely in your browser with no server required, keeping your data completely private.
 
 ## Features
 
-- 🔍 **Full-text search** across all conversations and messages
-- 🎲 **Random conversation discovery** with shuffle feature
-- 📝 **Markdown rendering** with toggle to view raw markdown
-- 📋 **Copy functionality** for messages, titles, and Claude search URLs
-- 🎨 **Claude-inspired UI** with resizable and collapsible sidebar
-- 🔒 **100% private** - runs locally in your browser, no data leaves your device
-- 🚀 **Fast and responsive** - handles large conversation exports efficiently
+- **Dual AI support** - Works with both ChatGPT and Claude exports with automatic format detection
+- **Full-text search** across all conversations and messages
+- **Multi-term search** - Use comma-separated terms to find conversations containing ALL specified terms
+- **Keyboard navigation** - Navigate conversations with arrow keys, clear search with Escape
+- **Random conversation discovery** with shuffle feature
+- **Markdown rendering** with toggle to view raw markdown
+- **Copy functionality** for messages, titles, and search URLs
+- **Scroll to top** - Quick navigation button for long conversations
+- **Clean, intuitive UI** with resizable and collapsible sidebar
+- **Accessibility-first** - Full screen reader support, ARIA labels, and keyboard-friendly interface
+- **100% private** - runs locally in your browser, no data leaves your device
+- **Fast and responsive** - handles large conversation exports efficiently
 
 ## Getting Started
 
 ### Prerequisites
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
-- Your Claude conversation export file (conversations.json)
+- Your ChatGPT and/or Claude conversation export file (conversations.json)
 
-### How to Export Your Claude Conversations
+### How to Export Your Conversations
+
+You can load ChatGPT exports, Claude exports, or both (by switching between tabs).
+
+#### Exporting from ChatGPT
+
+1. Visit: https://chatgpt.com/#settings
+2. Click on the "Data Controls" tab
+3. Scroll to the bottom and click "Export data"
+4. Wait for the email from OpenAI with your export link
+5. Download the file when the email arrives
+6. Unzip the downloaded file
+7. Locate the `conversations.json` file in the extracted folder
+
+#### Exporting from Claude
 
 1. Visit: https://claude.ai/settings/data-privacy-controls
 2. Scroll to the bottom of the page and click "Export data"
-3. Wait for the email from Claude with your export
+3. Wait for the email from Anthropic with your export
 4. Download the file when the email arrives
 5. Unzip the downloaded file
 6. Locate the `conversations.json` file in the extracted folder
@@ -48,15 +67,21 @@ Both options work exactly the same way - your data never leaves your browser.
 ### Loading Your Conversations
 
 1. Click the "Load JSON file" button in the sidebar
-2. Select your `conversations.json` file
-3. The app will load and display all your conversations
+2. Select your `conversations.json` file (from either ChatGPT or Claude)
+3. The app automatically detects the format and switches to the appropriate service tab
+4. Your conversations are loaded and ready to search
+
+You can load conversations from both services - just use the tabs at the top to switch between ChatGPT and Claude, then load each export file separately.
 
 ### Searching
 
 - Use the search box at the top to search through all conversations
 - Search works across conversation titles and message content
+- **Multi-term search**: Use comma-separated terms to find conversations containing ALL terms
+  - Example: `python, api, testing` finds only conversations that contain all three terms
+  - Example: `machine learning, tensorflow` finds conversations about both topics
 - Results update as you type
-- Click "Clear" to reset the search
+- Click "Clear" or press **Escape** to reset the search
 
 ### Viewing Conversations
 
@@ -72,6 +97,19 @@ Both options work exactly the same way - your data never leaves your browser.
 - **Resizable sidebar**: Drag the edge to resize
 - **Collapsible sidebar**: Click the arrow to hide/show
 - **Random conversations**: Click the shuffle button to discover random conversations
+- **Scroll to top**: When viewing long conversations, a button appears to quickly scroll back to the top
+- **Service switching**: Toggle between ChatGPT and Claude conversations using the tabs at the top
+
+### Keyboard Shortcuts
+
+- **Up/Down Arrow Keys**: Navigate between conversations in the sidebar
+- **Escape**: Clear the current search and return to all conversations
+- **Tab**: Navigate through interface elements (buttons, search box, etc.)
+- **Enter**: Select a conversation when focused
+
+The interface intelligently switches between keyboard and mouse modes:
+- Using arrow keys disables hover previews until you click again
+- Clicking a conversation enables hover previews for mouse navigation
 
 ## Privacy & Security
 
@@ -84,9 +122,13 @@ This application prioritizes your privacy:
 
 ## Technical Details
 
-### Supported File Format
+### Supported File Formats
 
-- `conversations.json` from Claude exports
+The tool automatically detects and supports:
+- `conversations.json` from ChatGPT exports (OpenAI format)
+- `conversations.json` from Claude exports (Anthropic format)
+
+No manual format selection needed - just load your file and the app handles the rest!
 
 ### Browser Compatibility
 
@@ -100,6 +142,16 @@ This application prioritizes your privacy:
 - Pure HTML/CSS/JavaScript
 - [Marked.js](https://marked.js.org/) for markdown rendering
 - No other external dependencies
+
+### Accessibility Features
+
+This tool is built with accessibility in mind:
+- **Screen reader support**: ARIA live regions announce search results, conversation selections, and file loads
+- **Keyboard navigation**: Full keyboard support with arrow keys, Escape, and Tab
+- **Focus indicators**: Clear visual focus states for all interactive elements
+- **Semantic HTML**: Proper use of headings, landmarks, and ARIA labels
+- **Skip links**: Quick navigation to main content
+- **Reduced motion support**: Respects user's motion preferences
 
 ## Troubleshooting
 
@@ -132,4 +184,4 @@ MIT License - feel free to modify and distribute as needed.
 
 ---
 
-**Note**: This tool is not officially affiliated with Anthropic or Claude AI.
+**Note**: This tool is not officially affiliated with Anthropic (Claude AI) or OpenAI (ChatGPT). It is an independent, open-source project designed to help you search and explore your own conversation exports.

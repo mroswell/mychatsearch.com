@@ -929,6 +929,17 @@
     document.addEventListener('keydown', handleKeyboardNavigation);
 
     function handleKeyboardNavigation(event) {
+        // Handle Escape key to clear search
+        if (event.key === 'Escape') {
+            // If search has content, clear it
+            if (searchInput.value.trim()) {
+                event.preventDefault();
+                clearSearch();
+                searchInput.focus();
+                return;
+            }
+        }
+
         // Only handle arrow keys when not typing in search box
         if (document.activeElement === searchInput) return;
 
