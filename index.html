@@ -898,6 +898,7 @@
     let currentConversation = null;
     let searchTimeout = null;
     let currentSearchQuery = '';
+    let hoverEnabled = false; // Track if user has clicked (enables hover previews)
 
     const searchInput = document.getElementById('searchInput');
     const conversationList = document.getElementById('conversationList');
@@ -906,6 +907,16 @@
     const statsDiv = document.getElementById('stats');
     const searchResultsHeader = document.getElementById('searchResultsHeader');
     const clearButton = document.getElementById('clearButton');
+    const announcementsDiv = document.getElementById('announcements');
+
+    // Screen reader announcement helper
+    function announce(message) {
+        announcementsDiv.textContent = message;
+        // Clear after a brief delay to allow screen readers to pick it up
+        setTimeout(() => {
+            announcementsDiv.textContent = '';
+        }, 1000);
+    }
 
     // Initialize file input
     const fileInput = document.getElementById('fileInput-chatgpt');
@@ -946,8 +957,8 @@
             document.querySelectorAll('.conversation-item').forEach(i =>
                 i.classList.remove('hover'));
 
-            // Trigger the conversation selection
-            selectConversation(conversationId);
+            // Trigger the conversation selection (disable hover for keyboard nav)
+            selectConversation(conversationId, false);
 
             // Scroll the conversation item into view in the sidebar
             newItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -957,6 +968,10 @@
     // Service switching function
     window.switchService = function(service) {
         currentService = service;
+
+        // Announce to screen readers
+        const serviceName = service === 'chatgpt' ? 'ChatGPT' : 'Claude';
+        announce(`Switched to ${serviceName} conversations`);
 
         // Update UI theme
         document.body.className = `${service}-theme`;
@@ -1370,12 +1385,17 @@
             displayConversations(conversations[currentService]);
             showConversationSuggestions();
 
+            // Announce to screen readers
+            const serviceName = currentService === 'chatgpt' ? 'ChatGPT' : 'Claude';
+            announce(`Loaded ${conversations[currentService].length} ${serviceName} conversations`);
+
             // Reset file input so the same file can be loaded again
             event.target.value = '';
 
         } catch (error) {
             console.error('Error details:', error);
             console.error('Error stack:', error.stack);
+            announce(`Error loading file: ${error.message}`);
             alert(`Error loading file: ${error.message}\n\nMake sure you're loading the correct export type for the selected service.`);
         }
     }
@@ -1431,13 +1451,19 @@
             });
 
             // Update results header based on search type
+            let searchMessage;
             if (searchTerms.length > 1) {
+                searchMessage = `Found ${filteredConversations.length} conversations containing all terms: ${searchTerms.map(t => '"' + t + '"').join(', ')}`;
                 searchResultsHeader.classList.add('active');
-                searchResultsHeader.textContent = `Found ${filteredConversations.length} conversations containing all terms: ${searchTerms.map(t => '"' + t + '"').join(', ')}`;
+                searchResultsHeader.textContent = searchMessage;
             } else {
+                searchMessage = `Found ${filteredConversations.length} conversations matching "${query}"`;
                 searchResultsHeader.classList.add('active');
-                searchResultsHeader.textContent = `Found ${filteredConversations.length} conversations matching "${query}"`;
+                searchResultsHeader.textContent = searchMessage;
             }
+
+            // Announce to screen readers (searchResultsHeader already has aria-live, but announce provides backup)
+            announce(searchMessage);
 
             displayConversations(filteredConversations, searchTerms);
         }, 300);
@@ -1491,21 +1517,40 @@
         chatView.innerHTML = suggestionsHtml;
     }
 
-    window.selectConversation = function(conversationId) {
+    window.selectConversation = function(conversationId, enableHover = true) {
         const conv = conversations[currentService].find(c => c.uuid === conversationId);
         if (conv) {
-            displayConversation(conv, currentSearchQuery);
+            // Enable/disable hover mode based on parameter
+            hoverEnabled = enableHover;
 
-            // Update active state in sidebar
+            // Clear ALL hover and active states first, and blur any focused items
             document.querySelectorAll('.conversation-item').forEach(item => {
-                if (item.dataset.id === conversationId) {
-                    item.classList.add('active');
-                    item.setAttribute('aria-current', 'true');
-                } else {
-                    item.classList.remove('active');
-                    item.removeAttribute('aria-current');
-                }
+                item.classList.remove('hover');
+                item.classList.remove('active');
+                item.removeAttribute('aria-current');
+                item.blur(); // Remove focus from previously clicked buttons
             });
+
+            // Then set active state on the selected item
+            const selectedItem = document.querySelector(`.conversation-item[data-id="${conversationId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+                selectedItem.setAttribute('aria-current', 'true');
+            }
+
+            // Show loading indicator
+            chatView.style.cursor = 'wait';
+
+            // Use setTimeout to let the cursor update before heavy rendering
+            setTimeout(() => {
+                displayConversation(conv, currentSearchQuery);
+
+                // Reset cursor
+                chatView.style.cursor = '';
+
+                // Announce to screen readers
+                announce(`Selected conversation: ${conv.name || 'Untitled'}`);
+            }, 10);
         }
     };
 
@@ -1561,6 +1606,9 @@
                     console.log('Displaying conversation:', conv.name, 'Messages:', conv.chat_messages?.length);
                     displayConversation(conv, searchTerms);
 
+                    // Enable hover mode on first click
+                    hoverEnabled = true;
+
                     // Update active state (locked selection)
                     document.querySelectorAll('.conversation-item').forEach(i => {
                         i.classList.remove('active');
@@ -1573,9 +1621,11 @@
                 }
             });
 
-            // Add hover preview (light highlight)
+            // Add hover preview (light highlight) - only if hover mode is enabled
             item.addEventListener('mouseenter', () => {
-                item.classList.add('hover');
+                if (hoverEnabled) {
+                    item.classList.add('hover');
+                }
             });
 
             // Remove hover preview when mouse leaves
@@ -1595,6 +1645,7 @@
 
         if (!conv) {
             console.error('No conversation object provided');
+            announce('Error: Conversation not found');
             chatView.innerHTML = '<div class="no-results">Error: Conversation not found</div>';
             return;
         }
@@ -1610,6 +1661,7 @@
         if (!conv.chat_messages || conv.chat_messages.length === 0) {
             console.warn('No messages in conversation:', conv.name);
             console.warn('Full conversation object:', conv);
+            announce('No messages in this conversation');
             chatView.innerHTML = '<div class="no-results">No messages in this conversation</div>';
             return;
         }
